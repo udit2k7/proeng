@@ -27,7 +27,7 @@ Without the `++` prefix, nothing happens at all. "yes", "run the tests" and
 ## Install
 
 ```
-/plugin marketplace add uditt/proeng
+/plugin marketplace add udit2k7/proeng
 /plugin install proeng
 ```
 
@@ -85,7 +85,7 @@ no hook at all.
 
 ## The desktop widget
 
-This plugin is the hook only. The full [ProEng project](https://github.com/uditt/proeng)
+This plugin is the hook only. The full [ProEng project](https://github.com/udit2k7/proeng)
 also has a floating desktop widget that does voice dictation — speak, and it
 transcribes locally with Whisper, rewrites, and copies to your clipboard.
 
