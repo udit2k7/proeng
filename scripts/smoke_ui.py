@@ -72,6 +72,7 @@ def main() -> int:
     step("render a VERY long result", lambda: _long_result(proeng))
     step("panel stays fully on screen", lambda: _on_screen(proeng))
     step("panel follows the character", lambda: _follows(proeng))
+    step("Speak again restarts dictation", lambda: _again(proeng))
     step("settings dialog builds", lambda: _settings(proeng))
     step("render a key alert", lambda: _alert(proeng))
     step("hide the panel", proeng.hide_panel)
@@ -219,6 +220,36 @@ def _follows(proeng) -> None:
     after = proeng.panel.pos()
     if before == after:
         raise AssertionError("panel did not move with the character")
+
+
+def _again(proeng) -> None:
+    """After a result, "Speak again" must start over cleanly.
+
+    The important part is not that it fires - it is that the previous result
+    is cleared. Leaving the old rewrite on screen while recording the next one
+    would be actively misleading.
+    """
+    if not proeng.panel.again_button.isVisible():
+        raise AssertionError("Speak again is not shown beside a result")
+
+    fired: list[int] = []
+    proeng.panel.again_requested.connect(lambda: fired.append(1))
+    proeng.panel.again_button.click()
+    QApplication.processEvents()
+    if not fired:
+        raise AssertionError("Speak again did not request a new dictation")
+
+    # dictate_again() runs on the click; check it reset the panel.
+    if proeng.panel.output.isVisible():
+        raise AssertionError("the previous result is still on screen")
+    if proeng.panel.copy_button.isVisible():
+        raise AssertionError("the copy button survived into the new recording")
+    if proeng.panel.again_button.isVisible():
+        raise AssertionError("Speak again survived into the new recording")
+    if not proeng.panel.stop_button.isVisible():
+        raise AssertionError("Stop is missing from the new recording")
+    if proeng.panel.input.toPlainText():
+        raise AssertionError("the previous transcript was not cleared")
 
 
 def _settings(proeng) -> None:

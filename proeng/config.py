@@ -28,6 +28,10 @@ class Config:
     gemini_model: str = "gemini-3.5-flash-lite"
     gemini_timeout: float = 10.0
 
+    # Any number of OpenAI-compatible endpoints the user configures.
+    # Each: {name, base_url, api_key, model, timeout, requires_key}
+    custom_providers: list[dict] = field(default_factory=list)
+
     trigger_prefix: str = "++"
     hook_timeout: float = 5.0
 
@@ -40,6 +44,8 @@ class Config:
     preview_model: str = "base"
     partial_window_seconds: float = 8.0
 
+    scheme: str = "dark"      # dark | light | system
+    accent: str = "amber"     # a name from palettes.ACCENTS, or #RRGGBB
     opacity: float = 0.75
     character_size: int = 64
     panel_width: int = 380
@@ -79,6 +85,19 @@ def load(path: Path | None = None) -> Config:
     cfg.gemini_model = gm.get("model", cfg.gemini_model)
     cfg.gemini_timeout = float(gm.get("timeout_seconds", cfg.gemini_timeout))
 
+    # [[custom]] - a TOML array of tables, so several can be defined.
+    for entry in data.get("custom", []) or []:
+        if not isinstance(entry, dict):
+            continue
+        cfg.custom_providers.append({
+            "name": entry.get("name", "custom"),
+            "base_url": entry.get("base_url", ""),
+            "api_key": entry.get("api_keys") or entry.get("api_key", ""),
+            "model": entry.get("model", ""),
+            "timeout": float(entry.get("timeout_seconds", 20.0)),
+            "requires_key": bool(entry.get("requires_key", True)),
+        })
+
     h = data.get("hooks", {})
     cfg.trigger_prefix = h.get("trigger_prefix", cfg.trigger_prefix)
     cfg.hook_timeout = float(h.get("timeout_seconds", cfg.hook_timeout))
@@ -98,6 +117,8 @@ def load(path: Path | None = None) -> Config:
     )
 
     u = data.get("ui", {})
+    cfg.scheme = u.get("scheme", cfg.scheme)
+    cfg.accent = u.get("accent", cfg.accent)
     cfg.opacity = float(u.get("opacity", cfg.opacity))
     cfg.character_size = int(u.get("character_size", cfg.character_size))
     cfg.panel_width = int(u.get("panel_width", cfg.panel_width))
@@ -114,10 +135,13 @@ def load(path: Path | None = None) -> Config:
 
 def build_router(cfg: Config):
     """Assemble the tier chain described by the config."""
+    from .rewrite.custom import CustomTier
     from .rewrite.gemini import GeminiTier
     from .rewrite.groq import GroqTier
     from .rewrite.router import Router
     from .rewrite.rules import RulesTier
+
+    by_name = {p["name"]: p for p in cfg.custom_providers}
 
     tiers = []
     for name in cfg.tiers:
@@ -133,5 +157,23 @@ def build_router(cfg: Config):
             )
         elif name == "rules":
             tiers.append(RulesTier())
+        elif name in by_name:
+            p = by_name[name]
+            # A local endpoint is not "cloud", so offline_only keeps it.
+            local = any(
+                h in p["base_url"] for h in ("localhost", "127.0.0.1", "0.0.0.0")
+            )
+            if cfg.offline_only and not local:
+                continue
+            tiers.append(
+                CustomTier(
+                    name=p["name"],
+                    base_url=p["base_url"],
+                    api_key=p["api_key"],
+                    model=p["model"],
+                    timeout=p["timeout"],
+                    requires_key=p["requires_key"],
+                )
+            )
 
     return Router(tiers)

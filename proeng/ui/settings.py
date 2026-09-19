@@ -32,7 +32,13 @@ from PySide6.QtWidgets import (
 )
 
 from ..security import redact
-from . import theme
+from . import palettes, theme
+
+SCHEMES = [
+    ("Follow Windows", "system"),
+    ("Dark", "dark"),
+    ("Light", "light"),
+]
 
 LANGUAGES = [
     ("Auto-detect (Hindi + English)", "auto"),
@@ -65,6 +71,8 @@ class SettingsDialog(QDialog):
             "gemini_api_key": "",
             "language": "auto",
             "speech_level_threshold": "300",
+            "scheme": "dark",
+            "accent": "amber",
         }
         if not self.path.exists():
             return out
@@ -87,6 +95,8 @@ class SettingsDialog(QDialog):
             elif section == "speech" and key in (
                 "language", "speech_level_threshold"
             ):
+                out[key] = value
+            elif section == "ui" and key in ("scheme", "accent"):
                 out[key] = value
         return out
 
@@ -135,6 +145,39 @@ class SettingsDialog(QDialog):
         form.addRow("Microphone sensitivity", self.threshold)
         form.addRow("", self._hint(
             "Higher ignores people talking near you. Lower if it cuts you off."
+        ))
+
+        # --- appearance -------------------------------------------------
+        form.addRow("", self._hint(""))  # a little breathing room
+
+        self.scheme = QComboBox()
+        for label, value in SCHEMES:
+            self.scheme.addItem(label, value)
+        index = self.scheme.findData(self._existing["scheme"])
+        self.scheme.setCurrentIndex(index if index >= 0 else 0)
+        form.addRow("Theme", self.scheme)
+
+        self.accent = QComboBox()
+        for name, hexcode in palettes.ACCENTS.items():
+            # A swatch beside each name, so the choice is visible rather than
+            # a word you have to imagine.
+            self.accent.addItem(_swatch(hexcode), name.capitalize(), name)
+        index = self.accent.findData(self._existing["accent"])
+        if index < 0 and self._existing["accent"].startswith("#"):
+            # A custom hex the user typed into config.toml by hand - keep it
+            # rather than silently resetting them to amber.
+            self.accent.addItem(
+                _swatch(self._existing["accent"]),
+                self._existing["accent"],
+                self._existing["accent"],
+            )
+            index = self.accent.count() - 1
+        self.accent.setCurrentIndex(index if index >= 0 else 0)
+        form.addRow("Accent colour", self.accent)
+        form.addRow("", self._hint(
+            "Theme and colour apply when you reopen the panel. A light theme "
+            "is made less see-through automatically - pale text over a pale "
+            "desktop is unreadable."
         ))
 
         layout.addLayout(form)
@@ -196,6 +239,8 @@ class SettingsDialog(QDialog):
             ("gemini", "api_key"): self.gemini.text().strip(),
             ("speech", "language"): self.language.currentData(),
             ("speech", "speech_level_threshold"): str(int(self.threshold.value())),
+            ("ui", "scheme"): self.scheme.currentData(),
+            ("ui", "accent"): self.accent.currentData(),
         }
         try:
             self._write(updates)
@@ -261,6 +306,21 @@ class SettingsDialog(QDialog):
         ):
             parts.append(f"{name}: {redact(value) if value else 'not set'}")
         return "   ".join(parts)
+
+
+def _swatch(hexcode: str):
+    """A small filled circle, so a colour choice can be seen not guessed."""
+    from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
+
+    pix = QPixmap(16, 16)
+    pix.fill(QColor(0, 0, 0, 0))
+    p = QPainter(pix)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setPen(QColor(0, 0, 0, 60))
+    p.setBrush(QColor(hexcode))
+    p.drawEllipse(2, 2, 12, 12)
+    p.end()
+    return QIcon(pix)
 
 
 def _eye_icon():

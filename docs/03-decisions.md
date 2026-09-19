@@ -846,6 +846,85 @@ screen.
 
 ---
 
+## D32 — Any OpenAI-compatible provider
+
+**Why:** Groq and Gemini are free and fast, but not universally reachable. Some
+countries block them, some workplaces forbid them, and plenty of people already
+pay for something else. Tying the tool to two providers limited who could use it
+at all.
+
+**Chosen:** one adapter speaking the OpenAI chat-completions shape, plus
+`[[custom]]` entries in config.toml. That one format covers OpenRouter,
+DeepSeek, Together, Mistral, Cerebras, Fireworks, OpenAI itself - and, notably,
+**local servers**: Ollama, LM Studio, vLLM, llama.cpp, LocalAI.
+
+So the local-model option cut in D15 is back, without any of its complexity:
+point `base_url` at `http://localhost:11434/v1`, set `requires_key = false`,
+and the tool runs entirely offline again. `offline_only` keeps localhost tiers
+and skips remote ones automatically.
+
+**Error messages name the likely cause**, because a misconfigured endpoint is
+the normal case here: a 404 says to check base_url and the model name, and a
+non-OpenAI response says so rather than reporting a parse error.
+
+---
+
+## D33 — Themes: light, dark, follow-Windows, eight accents
+
+**Chosen:** `scheme` (dark / light / system) and `accent` in `[ui]`, both in the
+settings dialog with colour swatches. `system` reads `AppsUseLightTheme` from
+the registry.
+
+**The light scheme is not an inverted dark scheme.** A translucent panel over a
+light desktop is a harder problem: pale text on pale wallpaper disappears. So
+light has its own opacity floor of 0.80 against dark's 0.50, and
+`effective_opacity()` silently raises a too-low setting rather than letting
+someone configure an unreadable panel and conclude the tool is broken.
+
+Hover tints also invert - a white overlay is invisible on a light panel - which
+is why the stylesheet takes a `tint` rather than hardcoding white.
+
+**Custom hex accepted:** `accent = "#7FBF6A"` works, and the dialog keeps a
+hand-typed hex rather than resetting it to amber.
+
+**Verified:** all 27 scheme x accent combinations render with no unresolved
+template tokens, and a round-trip through the dialog preserved all 119 config
+comments and both API keys.
+
+---
+
+## D34 — No advertising
+
+**Requested:** a small ad in the panel, to monetise the tool.
+
+**Declined, with the reasoning, because it would damage the project:**
+
+1. **It contradicts the privacy promise.** Ad networks require an identifier -
+   IP, user agent, often a device ID - sent on every impression. The tool
+   currently sends nothing anywhere except the user's own text to the user's
+   own API key. An ad slot would make "we share no data" untrue, and that claim
+   is one of the genuinely good things about this tool.
+2. **Ad networks do not serve desktop apps.** AdSense terms cover websites;
+   desktop inventory means a specialised SDK, and those are aimed at mobile
+   games.
+3. **The revenue would be pennies.** Display advertising pays roughly $1-5 per
+   thousand impressions. A few hundred developer users would generate cents a
+   month - far less than the effort, and far less than the goodwill it costs.
+4. **Developers react badly to ads in developer tools.** For a new project with
+   no reputation yet, this is the kind of thing that ends adoption rather than
+   funding it.
+
+**Offered instead:** GitHub Sponsors, plus optionally a single static line in
+the About area reading "Supported by <name>", served from the project's own
+repository. No third party, no tracking, no request leaving the machine that
+the user did not initiate. Sponsors pay the author directly.
+
+This is the same conclusion as the monetisation analysis: the tool is worth more
+as a credential than as a revenue source, and the multilingual dictation angle
+is the part with actual commercial potential.
+
+---
+
 ## D12 — Unload the speech model when idle
 
 **Chosen:** drop the Whisper model out of memory after 10 minutes of no use, and

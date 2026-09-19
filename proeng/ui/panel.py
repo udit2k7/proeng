@@ -32,6 +32,7 @@ class Panel(QWidget):
     target_changed = Signal(object)
     copy_requested = Signal()
     settings_requested = Signal()
+    again_requested = Signal()
     closed = Signal()
 
     def __init__(self, opacity: float = 0.75) -> None:
@@ -145,6 +146,16 @@ class Panel(QWidget):
         row.addWidget(self.tier_label)
         row.addStretch(1)
 
+        # Without this, dictating twice meant Esc then clicking the character
+        # again - two actions to repeat the single thing this tool does.
+        self.again_button = QPushButton("Speak again")
+        self.again_button.setObjectName("again")
+        self.again_button.setVisible(False)
+        self.again_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.again_button.setToolTip("Start a new dictation (Ctrl+R)")
+        self.again_button.clicked.connect(self.again_requested.emit)
+        row.addWidget(self.again_button)
+
         self.copy_button = QPushButton("Click to copy")
         self.copy_button.setObjectName("copy")
         self.copy_button.setVisible(False)
@@ -164,6 +175,7 @@ class Panel(QWidget):
         self.input.setReadOnly(False)
         self.output.setVisible(False)
         self.copy_button.setVisible(False)
+        self.again_button.setVisible(False)
         self.stop_button.setVisible(True)
         self.stop_button.setEnabled(True)
         self.stop_button.setText("Stop")
@@ -226,6 +238,7 @@ class Panel(QWidget):
         self.output.setPlainText(text)
         self.output.setVisible(True)
         self.copy_button.setVisible(True)
+        self.again_button.setVisible(True)
         self.status.setText("")
 
         mark = {"groq": "*", "gemini": "*", "rules": "-"}.get(tier, "?")
@@ -365,6 +378,15 @@ class Panel(QWidget):
                 and mods & Qt.KeyboardModifier.ShiftModifier
             ):
                 self.copy_requested.emit()
+                return True
+
+            # Ctrl+R: go again without reaching for the mouse.
+            if (
+                key == Qt.Key.Key_R
+                and mods & Qt.KeyboardModifier.ControlModifier
+                and not self._recording
+            ):
+                self.again_requested.emit()
                 return True
 
             # Typing cancels dictation - you changed your mind, that is fine.

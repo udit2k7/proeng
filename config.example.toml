@@ -60,6 +60,59 @@ model = "gemini-3.5-flash-lite"
 # ~1.8s typical.
 timeout_seconds = 10
 
+# ============================================================================
+#  OTHER API PROVIDERS - add as many as you like
+# ============================================================================
+#
+# Cannot reach Groq or Gemini? Already paying for something else? Want to run
+# a model on your own machine? Any OpenAI-compatible endpoint works.
+#
+# Add the provider's name to the `tiers` list at the top of this file to use
+# it, in whatever order you want. For example:
+#     tiers = ["openrouter", "groq", "rules"]
+#
+# Uncomment and edit one of these, or add your own:
+
+# [[custom]]
+# name = "openrouter"                        # whatever you want to call it
+# base_url = "https://openrouter.ai/api/v1"
+# api_key = ""                               # <<< YOUR KEY HERE
+# model = "meta-llama/llama-3.3-70b-instruct"
+
+# [[custom]]
+# name = "deepseek"
+# base_url = "https://api.deepseek.com/v1"
+# api_key = ""                               # <<< YOUR KEY HERE
+# model = "deepseek-chat"
+
+# [[custom]]
+# name = "mistral"
+# base_url = "https://api.mistral.ai/v1"
+# api_key = ""                               # <<< YOUR KEY HERE
+# model = "mistral-small-latest"
+
+# [[custom]]
+# name = "openai"
+# base_url = "https://api.openai.com/v1"
+# api_key = ""                               # <<< YOUR KEY HERE
+# model = "gpt-4o-mini"
+
+# A LOCAL model - no key, no internet, nothing leaves your machine.
+# Install Ollama (ollama.com), run `ollama pull qwen2.5:3b`, then:
+# [[custom]]
+# name = "local"
+# base_url = "http://localhost:11434/v1"
+# model = "qwen2.5:3b"
+# requires_key = false
+# timeout_seconds = 60                       # local models are slower
+
+# Others that work the same way, just change base_url and model:
+#   Together    https://api.together.xyz/v1
+#   Cerebras    https://api.cerebras.ai/v1
+#   Fireworks   https://api.fireworks.ai/inference/v1
+#   LM Studio   http://localhost:1234/v1     (requires_key = false)
+
+
 [hooks]
 # Prompts starting with this prefix get rewritten inside Claude Code / Codex.
 # Everything else passes through untouched. See docs/09-integrations.md.
@@ -121,6 +174,14 @@ speech_level_threshold = 300
 vad_aggressiveness = 2
 
 [ui]
+# Colour scheme: "dark" | "light" | "system" (follows your Windows setting)
+scheme = "dark"
+
+# Accent colour, used for the recording ring and the Stop button.
+# amber | blue | teal | green | purple | pink | red | grey
+# ...or any hex code you like, e.g. accent = "#7FBF6A"
+accent = "amber"
+
 # 0.5 = very see-through, 1.0 = solid
 opacity = 0.75
 character_size = 64

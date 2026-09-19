@@ -89,6 +89,7 @@ class ProEngApp(QObject):
         self.panel.target_changed.connect(self._on_target_changed)
         self.panel.copy_requested.connect(self._copy)
         self.panel.settings_requested.connect(self.open_settings)
+        self.panel.again_requested.connect(self.dictate_again)
         self.panel.closed.connect(self.hide_panel)
 
         w = self.worker
@@ -160,6 +161,21 @@ class ProEngApp(QObject):
     def show_panel(self) -> None:
         self._idle_unload.stop()
         self.panel.slide_in(self.character.geometry(), self.character.on_right_edge())
+        self.panel.begin_recording()
+        self.panel.reset_copy_button()
+        self.character.set_state(ch.LISTENING)
+        self.panel.activateWindow()
+        self.start_dictation.emit()
+
+    @Slot()
+    def dictate_again(self) -> None:
+        """Start a fresh dictation without closing and reopening the panel.
+
+        Deliberately does NOT go through show_panel(): the panel is already
+        open and correctly placed, so re-running the slide animation would
+        make it jump for no reason.
+        """
+        self._idle_unload.stop()
         self.panel.begin_recording()
         self.panel.reset_copy_button()
         self.character.set_state(ch.LISTENING)
@@ -244,6 +260,15 @@ class ProEngApp(QObject):
         # The speech model may have changed with the language, so drop the
         # loaded one; the next dictation reloads the right one.
         self.worker.release_model()
+
+        # Re-apply the colour scheme. Qt stylesheets can be swapped live, so
+        # this takes effect immediately rather than needing a restart.
+        theme.apply(self.cfg)
+        self.panel.setStyleSheet(theme.panel_stylesheet(self.cfg.opacity))
+        self.panel.update()
+        self.character.update()
+        self.tray.setIcon(self._tray_icon())
+
         self.panel.set_status("settings saved")
 
     def _follow_character(self) -> None:
