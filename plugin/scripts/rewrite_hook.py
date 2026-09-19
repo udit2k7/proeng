@@ -49,11 +49,31 @@ from pathlib import Path
 DEFAULT_PREFIX = "++"
 TIMEOUT = 12
 
-# Set PROENG_LOG to a file path to record every invocation. Off by default -
-# a published plugin should not scatter logs on other people's machines - but
-# invaluable when answering "did the hook even run?", which is not otherwise
-# answerable from the outside.
-LOG_PATH = os.environ.get("PROENG_LOG", "")
+def _default_log() -> str:
+    """Where to log, when nothing was configured.
+
+    Inside a checkout, log to hook.log there: it is gitignored, and "did the
+    hook even run?" is otherwise unanswerable from outside the host process -
+    a question this project has had to answer four separate times.
+
+    Installed as a plugin with no checkout, log nowhere. Scattering files on
+    other people's machines is not on.
+
+    Not an environment variable by default because some hosts - Codex among
+    them - have no field for passing one.
+    """
+    explicit = os.environ.get("PROENG_LOG")
+    if explicit is not None:
+        return "" if explicit.lower() in ("", "0", "none", "off") else explicit
+
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "config.toml").exists() and (parent / "proeng").is_dir():
+            return str(parent / "hook.log")
+    return ""
+
+
+LOG_PATH = _default_log()
 
 
 def log(message: str) -> None:

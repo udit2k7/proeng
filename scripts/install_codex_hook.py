@@ -31,8 +31,12 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 CODEX_HOME = Path.home() / ".codex"
-HOOKS_FILE = CODEX_HOME / "hooks.json"
-LOG_FILE = CODEX_HOME / "proeng-hook.log"
+# The binary references "hooks/hooks.json", not a bare hooks.json at the root.
+# The first attempt wrote the latter and was silently ignored.
+HOOKS_FILE = CODEX_HOME / "hooks" / "hooks.json"
+# The hook logs into the checkout on its own now - Codex has no field for
+# passing an environment variable.
+LOG_FILE = ROOT / "hook.log"
 
 # The zero-dependency hook, so it runs under whatever Python Codex can see -
 # not the project's venv, which Codex knows nothing about.
@@ -40,22 +44,23 @@ HOOK_SCRIPT = ROOT / "plugin" / "scripts" / "rewrite_hook.py"
 
 
 def entry() -> dict:
+    """One hook entry, using only fields the binary actually accepts.
+
+    The schema in codex.exe lists: type, command, timeout, async,
+    statusMessage, additionalContextLimit - and for MCP handlers server, tool,
+    input, prompt, agent.
+
+    Notably absent: **env**. The first attempt passed one, which for a Rust
+    internally-tagged enum most likely failed to deserialise and took the whole
+    entry with it. The hook now finds the checkout and its log by itself, so
+    nothing needs passing.
+    """
     return {
         "hooks": [
             {
                 "type": "command",
                 "command": f'python "{HOOK_SCRIPT}"',
                 "timeout": 20,
-                # Logging on by default here, because the whole point of this
-                # installation is to find out whether it runs at all.
-                "env": {
-                    "PROENG_LOG": str(LOG_FILE),
-                    # The same checkout Claude Code uses, so both share one
-                    # config.toml and one set of keys. The script can find it
-                    # unaided, but being explicit costs nothing and survives
-                    # the folder being moved.
-                    "PROENG_HOME": str(ROOT),
-                },
             }
         ]
     }
@@ -84,6 +89,8 @@ def install() -> int:
         print(f"ERROR: {HOOK_SCRIPT} not found.")
         return 1
 
+    HOOKS_FILE.parent.mkdir(parents=True, exist_ok=True)
+
     data = load()
     if HOOKS_FILE.exists():
         backup = HOOKS_FILE.with_suffix(".json.backup")
@@ -103,11 +110,14 @@ def install() -> int:
     print(f"log        -> {LOG_FILE}")
 
     print("\nNow RESTART Codex, then type a prompt starting with ++")
+    print("\nCodex may ASK YOU TO TRUST the hook first. The binary tracks a")
+    print("trusted_hash, so an untrusted hook is unlikely to run at all.")
+    print("Approve it if prompted, or run /hooks inside Codex to review it.")
     print("\nThen check whether it ran:")
-    print(f"  type \"{LOG_FILE}\"")
-    print("\n  entries appear  -> it works")
-    print("  file is missing -> the desktop app does not read hooks.json;")
-    print("                     use the ProEng widget instead and paste")
+    print(f'  Get-Content "{LOG_FILE}"')
+    print("\n  entries appear -> it works")
+    print("  nothing new    -> the desktop app does not take hooks this way;")
+    print("                    the config.toml route is next to try")
     return 0
 
 
@@ -136,9 +146,24 @@ def remove() -> int:
     return 0
 
 
+def clean_old() -> None:
+    """Remove the first attempt's file, which Codex ignored."""
+    old = CODEX_HOME / "hooks.json"
+    if old.exists():
+        try:
+            data = json.loads(old.read_text(encoding="utf-8"))
+        except Exception:
+            return
+        submit = data.get("hooks", {}).get("UserPromptSubmit", [])
+        if submit and all(is_ours(e) for e in submit):
+            old.unlink()
+            print(f"removed the earlier, ignored {old}")
+
+
 def main() -> int:
     if "--remove" in sys.argv[1:]:
         return remove()
+    clean_old()
     return install()
 
 
