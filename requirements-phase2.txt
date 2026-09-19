@@ -1,0 +1,4 @@
+# Phase 2: the rewriter. Adds to requirements-phase1.txt.
+
+httpx>=0.27          # calling Groq (and later Ollama)
+pyperclip>=1.8.2     # clipboard

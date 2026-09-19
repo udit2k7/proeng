@@ -1,0 +1,3 @@
+# Phase 3: the floating widget. Adds to phase 1 and 2.
+
+PySide6>=6.6      # frameless, translucent, always-on-top widget (see D2)

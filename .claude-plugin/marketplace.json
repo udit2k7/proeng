@@ -1,0 +1,13 @@
+{
+  "name": "proeng",
+  "owner": {
+    "name": "uditt"
+  },
+  "plugins": [
+    {
+      "name": "proeng",
+      "source": "./plugin",
+      "description": "Rewrites rambling prompts into clear, structured ones before Claude sees them. Prefix with ++ and a free model (Groq or Gemini) restructures it - your Claude tokens are never spent on the messy version. Zero dependencies: Python standard library only."
+    }
+  ]
+}

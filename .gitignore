@@ -1,0 +1,26 @@
+# Holds your Groq API key — must never be committed
+config.toml
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Local data
+history.db
+*.log
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# Downloaded speech models (large, re-downloadable)
+models/
+
+# Hook diagnostic log
+hook.log
+
+# Plugin build artefacts
+plugin/**/__pycache__/

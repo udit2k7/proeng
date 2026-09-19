@@ -1,0 +1,10 @@
+{
+  "name": "proeng",
+  "description": "Rewrites rambling prompts into clear, structured ones before Claude sees them. Prefix a prompt with ++ and it is restructured by a free model (Groq or Gemini) - your Claude tokens are never spent on the messy version.",
+  "version": "0.1.0",
+  "author": {
+    "name": "uditt"
+  },
+  "homepage": "https://github.com/uditt/proeng",
+  "license": "MIT"
+}

@@ -1,0 +1,124 @@
+# ProEng configuration
+#
+# Copy this file to `config.toml` and edit it.
+# `config.toml` is never committed to git, because it holds your API key.
+
+[rewrite]
+# Order the tiers are tried in. Remove one to disable it entirely.
+tiers = ["groq", "gemini", "rules"]
+
+# Skip all cloud tiers. Turn this on when dictating anything sensitive.
+offline_only = false
+
+# Which AI you're about to paste into: "claude" | "chatgpt" | "gemini"
+default_target = "claude"
+
+[groq]
+# Free key from https://console.groq.com — costs nothing, no card needed.
+# Leave blank to disable this tier.
+api_key = ""
+# Optional: several keys, rotated automatically. When one hits its rate limit
+# the next is tried before falling back to the next provider. A list here
+# overrides api_key above.
+# api_keys = ["gsk_first...", "gsk_second..."]
+# Verified working 2026-09-19. Alternatives on the free tier:
+#   qwen/qwen3.8-27b    faster (~1.0s), slightly lower quality
+#   openai/gpt-oss-20b  returned empty output in testing - avoid
+# Groq retires models periodically. If you get HTTP 404, run:
+#   .venv\Scripts\python.exe scripts\list_models.py
+model = "openai/gpt-oss-120b"
+# ~1.9s typical; 3s left no margin.
+timeout_seconds = 8
+
+[gemini]
+# Free key from https://aistudio.google.com/apikey
+# Second cloud provider, so a Groq outage or rate limit costs you nothing.
+# Leave blank to disable this tier.
+api_key = ""
+# Optional: several keys, rotated automatically (see the Groq note above).
+# api_keys = ["AIza_first...", "AIza_second..."]
+# Verified working 2026-09-19. Google retires models for NEW keys without
+# warning - gemini-2.5-flash returned "no longer available to new users".
+# If you get a 404, run scripts\list_models.py and pick another.
+# Avoid: gemini-3.6-flash (emits a preamble), gemini-3.8-flash (503, overloaded)
+model = "gemini-3.5-flash-lite"
+# ~1.8s typical.
+timeout_seconds = 10
+
+[hooks]
+# Prompts starting with this prefix get rewritten inside Claude Code / Codex.
+# Everything else passes through untouched. See docs/09-integrations.md.
+trigger_prefix = "++"
+# Hard limit; past this the original prompt is used unchanged.
+timeout_seconds = 5
+
+[speech]
+# "tiny.en" | "base.en" | "small.en" | "medium.en"
+# Bigger is more accurate and slower. See docs/03-decisions.md D3.
+model = "base.en"
+
+# Dictation language. "en" | "hi" (Hindi) | any Whisper code | "auto" to detect.
+#
+# IMPORTANT: the ".en" models above are ENGLISH-ONLY. Setting a non-English
+# language automatically switches to the multilingual model of the same size
+# (base.en -> base), which is slightly weaker at English but handles everything.
+#
+# For Hindi, or for mixing Hindi and English in one sentence, use "auto" or
+# "hi" AND consider a bigger model - small or medium handle Hindi far better
+# than base does.
+language = "en"
+
+# A smaller, faster model used ONLY for the live preview while you speak.
+# The accurate model above still produces the final transcript.
+#
+# Why two: "small" runs at ~0.36x realtime on a laptop CPU, which made previews
+# cost more than the gap between them - they switched themselves off after one.
+# "base" is ~3x faster and quite good enough for text that is only on screen
+# while you keep talking. Set this to the same value as `model` to use one
+# model for both (saves ~400 MB, costs you live previews on slower machines).
+preview_model = "base"
+
+# Previews transcribe only the LAST this-many seconds, so their cost stays
+# constant however long you talk. 0 means the whole clip every time - do not,
+# unless you have a fast machine.
+partial_window_seconds = 8.0
+
+# How often (seconds) to show live text while you are still speaking.
+# Lower feels more responsive but re-transcribes more often. 0 turns off live
+# text entirely, so words only appear once you stop.
+partial_interval = 1.5
+# Seconds of silence before recording stops automatically.
+silence_timeout = 7.0
+# How loud speech must be (RMS, 0-32768) to count as YOURS rather than
+# someone else's. Voice detection cannot tell whose voice it is; loudness can,
+# because you are close to the microphone and other people are not.
+#
+# Symptom of too LOW: it keeps saying "listening" when you have stopped,
+#   because it can hear other people.
+# Symptom of too HIGH: it cuts you off mid-sentence when you speak quietly.
+#
+# 300 suits a normal room. Try 600-900 in a noisy office, 150 if you are soft
+# spoken or far from the mic.
+speech_level_threshold = 300
+
+# webrtcvad aggressiveness, 0-3. Higher rejects more background noise but
+# risks clipping quiet speech. 2 is the balance.
+vad_aggressiveness = 2
+
+[ui]
+# 0.5 = very see-through, 1.0 = solid
+opacity = 0.75
+character_size = 64
+panel_width = 380
+# "right" | "left"
+edge = "right"
+hotkey = "ctrl+shift+space"
+# Dim the character after this many idle seconds. 0 disables.
+idle_fade_seconds = 10
+# Drop the speech model from memory after this long unused, freeing about
+# 400 MB. It reloads in ~1.2s. 0 keeps it loaded. See docs D12.
+idle_unload_minutes = 10
+
+[history]
+enabled = true
+max_entries = 50

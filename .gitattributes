@@ -1,0 +1,26 @@
+# Normalise line endings.
+#
+# Without this, Git converts LF to CRLF on Windows checkout and back on commit,
+# which prints a warning for every file and produces noisy cross-platform diffs
+# when someone clones on Mac or Linux.
+#
+# Store everything as LF in the repository; Git still checks out CRLF locally
+# where the platform expects it.
+* text=auto eol=lf
+
+# Shell scripts and git hooks MUST be LF even on Windows - CRLF breaks the
+# shebang line and they fail with a confusing "bad interpreter" error.
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Windows-native scripts want CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary: never touch these.
+*.png binary
+*.jpg binary
+*.ico binary
+*.bin binary
+*.pt binary
