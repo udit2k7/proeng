@@ -1,0 +1,14 @@
+# Puts a "Sponsor" button at the top of the GitHub repo page.
+#
+# GitHub takes no cut on Sponsors. Every other platform here takes a
+# percentage, so keep github first.
+#
+# NOTE: the button only appears once you have joined GitHub Sponsors at
+# https://github.com/sponsors - until then this file does nothing.
+
+github: [udit2k7]
+
+# Uncomment any you actually set up. An unfinished link is worse than none.
+# ko_fi: udit2k7
+# buy_me_a_coffee: udit2k7
+# custom: ["https://www.paypal.me/udit2k7"]

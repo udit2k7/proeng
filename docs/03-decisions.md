@@ -981,6 +981,64 @@ settings untouched.
 
 ---
 
+## D36 — Funding: sponsorship only, and the About box reads a local file
+
+**Chosen:** GitHub Sponsors, a `Sponsor` button on the repo, and a "Supported
+by" line in the About box. No ads - see D34 for why.
+
+**The About box reads `SUPPORTERS.md` from disk. It fetches nothing.**
+
+The obvious implementation would pull the supporter list from the web so it
+could be updated without a release. That was rejected:
+
+- A network call the user did not ask for is one they did not ask for, however
+  small, and this tool's whole claim is that nothing leaves the machine except
+  the text you dictate to the provider you chose.
+- A fetch would reveal who is running the tool and how often - which is exactly
+  the tracking D34 refused, arriving through a side door.
+- It would fail offline, or hang on a slow link, for a cosmetic line.
+
+Supporters are therefore baked in at release time. Adding one means editing a
+file and cutting a release. That is a fair price for not surveilling anybody,
+and it keeps the "no telemetry" badge honest.
+
+**What sponsorship explicitly does not buy**, written into SUPPORTERS.md so it
+cannot be quietly forgotten: no priority support, no roadmap influence, and no
+advertising. The About box lists *names*, never messages, images or links to a
+product. The moment it carries a slogan it has become an ad, and D34 applies.
+
+**Expectations, stated honestly:** sponsorship on a new developer tool
+typically returns nothing for a long time, and a few hundred dollars a year if
+it goes well. This is worth doing because it costs an afternoon and keeps the
+option open - not because it is income.
+
+---
+
+## D37 — Codex desktop: hooks exist, but not where the CLI puts them
+
+`~/.codex/hooks.json` was written, Codex restarted, and the log file was never
+created - so the hook was never invoked.
+
+But searching the Codex binary finds `UserPromptSubmit`, `hooks.json` **and**
+`additionalContext`. The capability is there; the registration is wrong.
+
+The clue is in how a bundled plugin declares its own hooks
+(`.codex-plugin/plugin.json`):
+
+```json
+"hooks": { "hooks": { "Interrupt": [ ... ] } }
+```
+
+**Double-nested**, where the file we wrote nests once. The documentation also
+mentions inline `[hooks]` tables in `config.toml` as an alternative to
+`hooks.json`.
+
+Still being worked out. Recorded now because "the binary supports it, the
+registration is wrong" is a much better starting point than "Codex cannot do
+this", which is what a less careful look would have concluded.
+
+---
+
 ## D12 — Unload the speech model when idle
 
 **Chosen:** drop the Whisper model out of memory after 10 minutes of no use, and

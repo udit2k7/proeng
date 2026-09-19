@@ -1,5 +1,11 @@
 # ProEng — Prompt Engineer
 
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors)](https://github.com/sponsors/udit2k7)
+[![Licence](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.12+-3776ab?logo=python&logoColor=white)](https://www.python.org/)
+[![Platform](https://img.shields.io/badge/platform-Windows-0078d4)](https://github.com/udit2k7/proeng)
+[![No telemetry](https://img.shields.io/badge/telemetry-none-success)](#privacy)
+
 A small floating desktop tool for Windows. You talk (or type) in your own rambling
 words; it hands back a clean, well-structured prompt ready to paste into Claude Code,
 ChatGPT, or Gemini.
@@ -127,6 +133,30 @@ Read these in order. They were written before any code, on purpose.
 
 Add a free API key to `config.toml` to enable the cloud tiers - see
 [docs/06-setup.md](docs/06-setup.md).
+
+## Privacy
+
+No telemetry. No analytics. No accounts. No ads.
+
+- Your speech is transcribed **on your machine** and never uploaded.
+- Your text goes only to the API provider whose key you configured - and you
+  choose which, including a local model that reaches nothing at all.
+- Nothing is fetched at runtime, including the supporter list in the About box.
+
+There is no server to send anything to, because there is no server.
+
+---
+
+## Funding
+
+ProEng is free, MIT licensed, and stays that way. No ads, no paid tier, no
+"pro" version withheld from you.
+
+If it saves you time, [sponsoring](https://github.com/sponsors/udit2k7) is the
+only way it gets funded. See [SUPPORTERS.md](SUPPORTERS.md) for what that does
+and - just as importantly - what it does not buy.
+
+---
 
 ## Scope
 

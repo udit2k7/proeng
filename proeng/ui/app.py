@@ -20,6 +20,7 @@ from . import theme
 from .character import Character
 from .hotkey import HotkeyFilter
 from .panel import Panel
+from .about import AboutDialog
 from .settings import SettingsDialog
 from .worker import DictationWorker
 
@@ -114,10 +115,13 @@ class ProEngApp(QObject):
         act_open.triggered.connect(self.toggle)
         act_settings = QAction("Settings...", menu)
         act_settings.triggered.connect(self.open_settings)
+        act_about = QAction("About / Sponsor...", menu)
+        act_about.triggered.connect(self.open_about)
         act_quit = QAction("Quit", menu)
         act_quit.triggered.connect(self.quit)
         menu.addAction(act_open)
         menu.addAction(act_settings)
+        menu.addAction(act_about)
         menu.addSeparator()
         menu.addAction(act_quit)
         self.tray.setContextMenu(menu)
@@ -248,6 +252,10 @@ class ProEngApp(QObject):
         dialog.saved.connect(self._reload_config)
         dialog.exec()
 
+    @Slot()
+    def open_about(self) -> None:
+        AboutDialog(parent=self.panel if self.panel.isVisible() else None).exec()
+
     def _reload_config(self) -> None:
         """Re-read config.toml and apply what can change without a restart.
 
@@ -298,6 +306,9 @@ class ProEngApp(QObject):
         act_settings = QAction("Settings...", menu)
         act_settings.triggered.connect(self.open_settings)
         menu.addAction(act_settings)
+        act_about = QAction("About / Sponsor...", menu)
+        act_about.triggered.connect(self.open_about)
+        menu.addAction(act_about)
         menu.addSeparator()
         quit_act = QAction("Quit", menu)
         quit_act.triggered.connect(self.quit)

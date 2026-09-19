@@ -74,6 +74,7 @@ def main() -> int:
     step("panel follows the character", lambda: _follows(proeng))
     step("Speak again restarts dictation", lambda: _again(proeng))
     step("settings dialog builds", lambda: _settings(proeng))
+    step("About dialog builds", lambda: _about(proeng))
     step("render a key alert", lambda: _alert(proeng))
     step("hide the panel", proeng.hide_panel)
 
@@ -265,6 +266,17 @@ def _settings(proeng) -> None:
     from PySide6.QtWidgets import QLineEdit
     if dialog.groq.echoMode() != QLineEdit.EchoMode.Password:
         raise AssertionError("API key field is not masked")
+    dialog.deleteLater()
+
+
+def _about(proeng) -> None:
+    """The About box must build, and must not fetch anything."""
+    from proeng.ui.about import AboutDialog, read_supporters
+
+    dialog = AboutDialog(parent=proeng.panel)
+    # read_supporters must be a pure file read - no network, no exception
+    # when the file is missing or has no sponsors yet.
+    read_supporters()
     dialog.deleteLater()
 
 

@@ -93,6 +93,14 @@ That is the route that genuinely saves tokens, since you paste only the clean
 version. It needs Python, Qt and a speech model, which is why it is not bundled
 here.
 
+## Funding
+
+Free, MIT licensed, no ads, no telemetry, no paid tier. You bring your own API
+key and your text goes only to the provider you chose.
+
+[Sponsoring](https://github.com/sponsors/udit2k7) is the only way it gets
+funded.
+
 ## Licence
 
 MIT
