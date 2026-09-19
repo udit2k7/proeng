@@ -82,8 +82,16 @@ def log(message: str) -> None:
         return
     try:
         stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Name the caller. Claude Code and Codex share one log, and without
+        # this there is no way to tell which host invoked us - which made
+        # "has Codex run it yet?" unanswerable from the log alone.
+        #
+        # The interpreter is the tell: the Claude Code installer points at the
+        # project venv; Codex uses whatever python is on PATH.
+        exe = sys.executable.replace("\\", "/").lower()
+        who = "claude" if "/proeng/.venv/" in exe else "codex?"
         with open(LOG_PATH, "a", encoding="utf-8") as fh:
-            fh.write(f"{stamp}  {message}\n")
+            fh.write(f"{stamp}  [{who}] {message}\n")
     except Exception:
         pass
 
