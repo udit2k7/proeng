@@ -792,6 +792,60 @@ them at construction.
 
 ---
 
+## D31 — The Stop button did nothing (Qt cross-thread delivery)
+
+**Reported:** clicking Stop showed "stopping..." and then kept listening.
+
+### Cause
+
+`panel.stop_recording` was connected to `worker.stop_recording` with a default
+connection. The worker lives on another thread, so Qt chose a **queued**
+connection - it posts the call to that thread's event loop.
+
+But during a recording the worker is inside `Recorder.record()`, a loop that
+never returns to its event loop. So the queued "stop" sat in the queue until
+recording ended on its own, which is precisely the thing it was meant to cause.
+
+**The tell we had all along:** Esc worked. `hide_panel()` calls
+`self.worker.stop_recording()` as a plain Python call from the UI thread, which
+bypasses Qt's delivery entirely. Same method, two call paths, only one working.
+
+### Fix
+
+Connect that one signal with `Qt.ConnectionType.DirectConnection`, so it runs
+on the UI thread.
+
+**Safe here and only here.** `Recorder.stop()` does exactly one thing - set a
+`threading.Event`, which exists for cross-thread signalling. Nothing is read,
+nothing is mutated, no Qt object is touched. Using DirectConnection for
+anything that touches worker state would be a data race.
+
+### Why no test caught it
+
+`smoke_ui.py` checked that clicking Stop **emitted the signal**. It always did.
+What failed was **delivery**, and delivery only fails when the receiving thread
+is blocked - which a smoke test running everything on one thread never
+reproduces.
+
+`scripts/test_stop.py` now does reproduce it: a fake worker blocks its own
+thread exactly as a recording does, Stop is pressed 0.4s in, and the test
+asserts it lands. It runs **both** connection types and expects the queued one
+to fail - so if Qt's behaviour ever changes, the test says so rather than
+silently passing.
+
+Measured: DirectConnection stops in **16ms**; QueuedConnection **never stopped**
+and ran the full 3 seconds.
+
+### Carry forward
+
+Third time this project has hit the same shape of problem (D23, D26, now this):
+**a test that exercises the mechanism on the happy path proves the code runs,
+not that it works.** Emitting a signal is not delivering it. Returning valid
+JSON is not having it honoured. Constructing a widget is not placing it on
+screen.
+
+---
+
 ## D12 — Unload the speech model when idle
 
 **Chosen:** drop the Whisper model out of memory after 10 minutes of no use, and

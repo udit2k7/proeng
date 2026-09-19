@@ -30,6 +30,70 @@ Built so that rewriting your prompt **never costs you Claude or ChatGPT tokens.*
 
 ---
 
+## Quick start
+
+**No API keys are included anywhere in this repository.** You bring your own —
+both providers below are free and need no card.
+
+### Just the Claude Code hook (easiest — no install, no dependencies)
+
+Type `++` before a rambling prompt and Claude receives a structured version.
+
+```
+/plugin marketplace add udit2k7/proeng
+/plugin install proeng
+```
+
+Then set your own key:
+
+```bash
+setx PROENG_GROQ_KEY "gsk_your_key_here"      # Windows
+export PROENG_GROQ_KEY="gsk_your_key_here"    # Mac / Linux
+```
+
+Get one free at [console.groq.com/keys](https://console.groq.com/keys). Needs
+Python 3 and nothing else — the hook uses only the standard library.
+
+### The full desktop widget (voice dictation)
+
+```bash
+git clone https://github.com/udit2k7/proeng.git
+cd proeng
+py -3.12 -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements-phase1.txt -r requirements-phase2.txt -r requirements-phase3.txt
+```
+
+Then add your key — either run this, which prompts without the key touching
+your shell history:
+
+```bash
+.venv\Scripts\python.exe scripts\set_key.py groq
+```
+
+…or copy `config.example.toml` to `config.toml` and paste it into the
+`api_key = ""` line yourself.
+
+```bash
+.venv\Scripts\python.exe -m proeng
+```
+
+A small circle appears at the screen edge. Click it, or press
+`Ctrl+Shift+Space`, and speak.
+
+### Where your key lives
+
+| | |
+|---|---|
+| `config.toml` | Your keys. **Gitignored** — cannot be committed |
+| `config.example.toml` | The template. Committed, always blank |
+| Environment variables | `PROENG_GROQ_KEY`, `PROENG_GEMINI_KEY` — override the file |
+
+A pre-commit hook blocks any commit containing an API-key-shaped string, and
+`scripts/audit_keys.py` checks your files, your git history, and whether the
+keys still work. See [docs/11-key-security.md](docs/11-key-security.md).
+
+---
+
 ## Documentation
 
 Read these in order. They were written before any code, on purpose.

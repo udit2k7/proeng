@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import sys
 
-from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
+from PySide6.QtCore import QObject, Qt, QThread, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QIcon, QPainter, QPixmap, QColor
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
@@ -70,7 +70,21 @@ class ProEngApp(QObject):
         self.character.right_clicked.connect(self._show_menu)
         self.character.moved.connect(self._follow_character)
 
-        self.panel.stop_recording.connect(self.worker.stop_recording)
+        # DirectConnection, deliberately.
+        #
+        # The worker lives on another thread, so Qt would normally QUEUE this
+        # call to that thread's event loop. But while recording, the worker is
+        # inside a long-running loop and never returns to its event loop - so
+        # the queued "stop" would only run once recording had already ended.
+        # Pressing Stop appeared to do nothing.
+        #
+        # DirectConnection runs it on the UI thread instead. That is safe here
+        # and ONLY here: Recorder.stop() does exactly one thing, set a
+        # threading.Event, which is designed for exactly this. Do not reuse
+        # this pattern for anything that touches worker state.
+        self.panel.stop_recording.connect(
+            self.worker.stop_recording, Qt.ConnectionType.DirectConnection
+        )
         self.panel.submit.connect(self._on_submit)
         self.panel.target_changed.connect(self._on_target_changed)
         self.panel.copy_requested.connect(self._copy)

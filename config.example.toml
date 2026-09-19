@@ -1,7 +1,19 @@
-# ProEng configuration
+# ProEng configuration - TEMPLATE
 #
-# Copy this file to `config.toml` and edit it.
-# `config.toml` is never committed to git, because it holds your API key.
+# ============================================================================
+#  FIRST RUN: copy this file to `config.toml`, then paste your own API key
+#             into the api_key line below. This file ships with no keys in it.
+#
+#      copy config.example.toml config.toml        (Windows)
+#      cp   config.example.toml config.toml        (Mac / Linux)
+#
+#  Or skip the file entirely and run:
+#      .venv\Scripts\python.exe scripts\set_key.py groq
+#  which prompts for the key without it touching your shell history.
+# ============================================================================
+#
+# `config.toml` is listed in .gitignore, so your key can never be committed.
+# This template is committed; NEVER put a real key in this file.
 
 [rewrite]
 # Order the tiers are tried in. Remove one to disable it entirely.
@@ -14,8 +26,10 @@ offline_only = false
 default_target = "claude"
 
 [groq]
-# Free key from https://console.groq.com — costs nothing, no card needed.
-# Leave blank to disable this tier.
+# >>> PASTE YOUR GROQ KEY BETWEEN THE QUOTES BELOW <<<
+# Free, no card needed: https://console.groq.com/keys
+# Looks like: gsk_AbCdEf0123456789...
+# Leave blank to disable this tier (the tool still works, less well).
 api_key = ""
 # Optional: several keys, rotated automatically. When one hits its rate limit
 # the next is tried before falling back to the next provider. A list here
@@ -31,8 +45,9 @@ model = "openai/gpt-oss-120b"
 timeout_seconds = 8
 
 [gemini]
-# Free key from https://aistudio.google.com/apikey
-# Second cloud provider, so a Groq outage or rate limit costs you nothing.
+# >>> OPTIONAL: PASTE YOUR GEMINI KEY BETWEEN THE QUOTES BELOW <<<
+# Free: https://aistudio.google.com/apikey
+# A second provider, so a Groq outage or rate limit costs you nothing.
 # Leave blank to disable this tier.
 api_key = ""
 # Optional: several keys, rotated automatically (see the Groq note above).
