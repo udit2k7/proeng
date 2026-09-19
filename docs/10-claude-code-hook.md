@@ -94,7 +94,7 @@ do not replace the file:
         "hooks": [
           {
             "type": "command",
-            "command": "\"<ABSOLUTE PATH>\\.venv\\Scripts\\python.exe\" \"<ABSOLUTE PATH>\\hooks\\claude_code_hook.py\"",
+            "command": "\"<ABSOLUTE PATH>\\.venv\\Scripts\\python.exe\" \"<ABSOLUTE PATH>\\plugin\\scripts\\rewrite_hook.py\"",
             "timeout": 15
           }
         ]
@@ -132,7 +132,7 @@ Nine cases, covering the happy path and every failure path. All should pass.
 To see a real rewrite:
 
 ```bash
-echo {"prompt":"++ I want a dark mode toggle that remembers my choice"} | .venv\Scripts\python.exe hooks\claude_code_hook.py
+echo {"prompt":"++ I want a dark mode toggle that remembers my choice"} | .venv\Scripts\python.exe plugin\scripts\rewrite_hook.py
 ```
 
 ---
@@ -182,7 +182,7 @@ prompt or add context, but not replace the text.
 That turns out to be **identical to how Claude Code behaves in practice** - see
 D23. The plan assumed Claude Code could replace the prompt and Codex could not;
 testing showed neither can. So the same context-injection approach serves both,
-and `hooks/claude_code_hook.py` works for Codex with only its registration path
+and `plugin/scripts/rewrite_hook.py` works for Codex with only its registration path
 differing (`~/.codex/hooks.json` or `~/.codex/config.toml`).
 
 Covered in [09-integrations.md](09-integrations.md).

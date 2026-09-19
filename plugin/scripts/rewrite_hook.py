@@ -13,14 +13,30 @@ THE ONE RULE: never eat a prompt. No key, no network, a bug in here - the user's
 words reach Claude regardless. A prompt-rewriting hook that loses prompts is far
 worse than no hook at all.
 
+ONE SCRIPT, EVERY HOST. Claude Code and Codex both point here, with the same
+PROENG_HOME, so there is a single set of keys and a single place to fix a bug.
+There is no per-host copy to keep in sync.
+
+TWO ENGINES, CHOSEN AUTOMATICALLY:
+
+  Full      If a ProEng checkout is importable, use its router - every
+            configured tier, custom OpenAI-compatible providers, local models,
+            and the rules fallback that works with no key at all.
+  Standalone Otherwise Groq then Gemini over urllib, with no dependencies.
+            This is what a plugin install gets.
+
+Either way the keys come from the same config.toml, so nothing is duplicated.
+
 CONFIGURATION, in order of precedence:
   1. Environment: PROENG_GROQ_KEY / PROENG_GEMINI_KEY / PROENG_PREFIX
   2. ~/.claude/proeng.toml
-  3. A ProEng project checkout's config.toml, via PROENG_HOME
+  3. A ProEng checkout's config.toml, via PROENG_HOME (or found automatically
+     if this script is sitting inside one)
 """
 
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import re
@@ -32,6 +48,24 @@ from pathlib import Path
 
 DEFAULT_PREFIX = "++"
 TIMEOUT = 12
+
+# Set PROENG_LOG to a file path to record every invocation. Off by default -
+# a published plugin should not scatter logs on other people's machines - but
+# invaluable when answering "did the hook even run?", which is not otherwise
+# answerable from the outside.
+LOG_PATH = os.environ.get("PROENG_LOG", "")
+
+
+def log(message: str) -> None:
+    """Never let logging break the hook - that would defeat its purpose."""
+    if not LOG_PATH:
+        return
+    try:
+        stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(LOG_PATH, "a", encoding="utf-8") as fh:
+            fh.write(f"{stamp}  {message}\n")
+    except Exception:
+        pass
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "openai/gpt-oss-120b"
@@ -86,8 +120,9 @@ def emit(obj: dict) -> None:
     sys.exit(0)
 
 
-def passthrough() -> None:
-    """Change nothing. Claude uses the original prompt."""
+def passthrough(why: str = "") -> None:
+    """Change nothing. The original prompt is used."""
+    log(f"passthrough ({why})" if why else "passthrough")
     emit({})
 
 
@@ -143,30 +178,82 @@ def read_toml_ish(path: Path) -> dict[str, str]:
     return out
 
 
+def find_proeng_home() -> Path | None:
+    """Locate a ProEng checkout: told explicitly, or found from our own path.
+
+    The self-discovery matters. This file normally lives at
+    <checkout>/plugin/scripts/rewrite_hook.py, so a checkout can be recognised
+    without anyone setting an environment variable - which removes one more
+    thing to configure twice.
+    """
+    told = os.environ.get("PROENG_HOME")
+    if told and (Path(told) / "config.toml").exists():
+        return Path(told)
+
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "config.toml").exists() and (parent / "proeng").is_dir():
+            return parent
+    return None
+
+
 def load_config() -> dict[str, str]:
     cfg: dict[str, str] = {}
 
-    home = os.environ.get("PROENG_HOME")
+    home = find_proeng_home()
     if home:
-        cfg.update(read_toml_ish(Path(home) / "config.toml"))
+        cfg.update(read_toml_ish(home / "config.toml"))
 
-    cfg.update(read_toml_ish(Path.home() / ".claude" / "proeng.toml"))
+    if not cfg:
+        cfg.update(read_toml_ish(Path.home() / ".claude" / "proeng.toml"))
 
-    # Environment wins - easiest thing to set per-machine or in CI.
-    for env, key in (
-        ("PROENG_GROQ_KEY", "groq.api_key"),
-        ("PROENG_GEMINI_KEY", "gemini.api_key"),
-        ("GROQ_API_KEY", "groq.api_key"),
-        ("GEMINI_API_KEY", "gemini.api_key"),
-    ):
-        value = os.environ.get(env)
-        if value:
-            cfg[key] = value
+    # Generic names LAST, as a fallback only.
+    #
+    # GROQ_API_KEY and GEMINI_API_KEY are shared by every tool on the machine,
+    # and may well belong to something else. Letting them override a checkout's
+    # config.toml meant the full engine used one key and this path used a
+    # different one - two sources of truth, silently disagreeing.
+    for env, key in (("GROQ_API_KEY", "groq.api_key"),
+                     ("GEMINI_API_KEY", "gemini.api_key")):
+        if not cfg.get(key) and os.environ.get(env):
+            cfg[key] = os.environ[env]
+
+    # PROENG_* names are unambiguous - set specifically for this tool - so they
+    # do override everything.
+    for env, key in (("PROENG_GROQ_KEY", "groq.api_key"),
+                     ("PROENG_GEMINI_KEY", "gemini.api_key")):
+        if os.environ.get(env):
+            cfg[key] = os.environ[env]
 
     prefix = os.environ.get("PROENG_PREFIX")
     if prefix:
         cfg["hooks.trigger_prefix"] = prefix
     return cfg
+
+
+def try_full_engine(home: Path, raw: str) -> str:
+    """Use the checkout's own router, if this Python can import it.
+
+    Fails quietly and returns "" - the standalone path below then runs. That
+    happens when the host launched us with a Python that lacks httpx, which is
+    normal and not worth complaining about.
+    """
+    try:
+        sys.path.insert(0, str(home))
+        from proeng.config import build_router, load  # noqa: PLC0415
+        from proeng.rewrite.base import Target  # noqa: PLC0415
+
+        cfg = load(home / "config.toml")
+        result = build_router(cfg).rewrite(raw, Target.CLAUDE)
+    except Exception as exc:  # noqa: BLE001
+        log(f"full engine unavailable ({exc.__class__.__name__}); using standalone")
+        return ""
+
+    if result.alert:
+        log(f"ALERT: {result.alert}")
+    if result.text:
+        log(f"REWROTE via {result.tier} (full engine) in {result.elapsed:.2f}s")
+    return result.text or ""
 
 
 # --- providers ------------------------------------------------------------
@@ -255,24 +342,41 @@ def tidy(text: str) -> str:
 # --- main -----------------------------------------------------------------
 
 def main() -> None:
+    log("invoked")
+
     try:
         payload = json.load(sys.stdin)
     except Exception:
-        passthrough()
+        passthrough("stdin was not valid JSON")
 
-    prompt = (payload.get("prompt") or "").strip()
+    # Claude Code sends "prompt"; be tolerant of other field names in case
+    # another host words it differently.
+    prompt = (
+        payload.get("prompt")
+        or payload.get("user_prompt")
+        or payload.get("message")
+        or ""
+    ).strip()
     if not prompt:
-        passthrough()
+        passthrough(f"no prompt field (saw keys: {sorted(payload)[:6]})")
 
     cfg = load_config()
     prefix = cfg.get("hooks.trigger_prefix", DEFAULT_PREFIX)
 
     if not prompt.startswith(prefix):
-        passthrough()
+        passthrough(f"no '{prefix}' prefix")
 
     raw = prompt[len(prefix):].strip()
     if not raw:
-        passthrough()
+        passthrough("prefix with nothing after it")
+
+    # Prefer the full engine when a checkout is importable: it has the extra
+    # providers, the local-model option and the rules fallback.
+    home = find_proeng_home()
+    if home:
+        text = try_full_engine(home, raw)
+        if text:
+            deliver(text, "ProEng: rewritten")
 
     attempts = [
         ("groq", cfg.get("groq.api_key", ""), try_groq),
@@ -301,9 +405,12 @@ def main() -> None:
 
         if text:
             elapsed = time.monotonic() - started
+            log(f"REWROTE via {name} in {elapsed:.2f}s "
+                f"({len(raw.split())} -> {len(text.split())} words)")
             deliver(text, f"ProEng: rewritten via {name} in {elapsed:.1f}s")
 
     # Nothing worked. Say why, but do not touch the prompt.
+    log("FAILED: " + "; ".join(problems))
     note = "ProEng could not rewrite: " + "; ".join(problems)
     if all("no key" in p for p in problems):
         note += ". Set PROENG_GROQ_KEY (free at console.groq.com)."

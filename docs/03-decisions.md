@@ -925,6 +925,62 @@ is the part with actual commercial potential.
 
 ---
 
+## D35 — One hook script, one set of keys
+
+**The user asked why anything was being installed twice.** They were right, and
+the duplication was worse than it looked.
+
+### What was actually duplicated
+
+Two hook scripts, 528 lines between them, doing the same job:
+`hooks/claude_code_hook.py` (used the venv and the full engine) and
+`plugin/scripts/rewrite_hook.py` (zero-dependency, for the published plugin).
+
+Worse, **they read different keys**. The Codex registration did not set
+`PROENG_HOME`, so that hook never saw this project's `config.toml` at all - it
+would have fallen back to a stray `GEMINI_API_KEY` in the environment, which
+happened to be a *different* Gemini key, and would have had no Groq key. Two
+installs, two configurations, silently disagreeing.
+
+### One script, two engines, chosen automatically
+
+`plugin/scripts/rewrite_hook.py` is now the only hook. Both hosts point at it.
+
+- **Finds its own checkout.** It sits at `<checkout>/plugin/scripts/`, so it
+  walks up to find `config.toml` beside a `proeng/` directory. No environment
+  variable needed, though `PROENG_HOME` still overrides.
+- **Full engine when importable:** the checkout's router, with every configured
+  tier, custom providers, local models and the rules fallback.
+- **Standalone otherwise:** Groq then Gemini over urllib, no dependencies. This
+  is what a plugin install gets.
+
+Either way, one `config.toml`.
+
+### Key precedence, corrected
+
+The bug above came from generic environment variables outranking the config
+file. `GROQ_API_KEY` and `GEMINI_API_KEY` are shared by every tool on a machine
+and may belong to something else entirely, so they are now a **last resort**:
+
+1. `PROENG_GROQ_KEY` / `PROENG_GEMINI_KEY` - unambiguous, set for this tool
+2. The checkout's `config.toml`
+3. `~/.claude/proeng.toml`
+4. `GROQ_API_KEY` / `GEMINI_API_KEY` - only if nothing above supplied one
+
+**Verified:** both the full and standalone paths now report identical keys, and
+both resolve to the values in `config.toml` rather than the stray environment
+variable.
+
+### Also fixed while here
+
+`install_hook.py` matched only the old filename when deduplicating, so
+re-running after the rename would have registered the hook twice and rewritten
+every prompt twice over. It now matches both names. Tested by running the
+installer twice: still exactly one entry, and the user's `theme` and `autoMode`
+settings untouched.
+
+---
+
 ## D12 — Unload the speech model when idle
 
 **Chosen:** drop the Whisper model out of memory after 10 minutes of no use, and

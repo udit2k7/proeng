@@ -14,7 +14,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-HOOK = ROOT / "hooks" / "claude_code_hook.py"
+# The single hook, shared by Claude Code and Codex.
+HOOK = ROOT / "plugin" / "scripts" / "rewrite_hook.py"
 PY = ROOT / ".venv" / "Scripts" / "python.exe"
 
 

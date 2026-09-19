@@ -23,7 +23,10 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
-HOOK_SCRIPT = ROOT / "hooks" / "claude_code_hook.py"
+# ONE script for every host - Claude Code, Codex, anything else.
+# It finds this checkout by its own location, so it uses this
+# config.toml and these keys without anything being copied.
+HOOK_SCRIPT = ROOT / "plugin" / "scripts" / "rewrite_hook.py"
 COMMAND = f'"{PYTHON}" "{HOOK_SCRIPT}"'
 
 USER_SETTINGS = Path.home() / ".claude" / "settings.json"
@@ -42,7 +45,10 @@ def load(path: Path) -> dict:
 
 
 def is_ours(entry: dict) -> bool:
-    return "claude_code_hook.py" in json.dumps(entry)
+    # Match the current name AND the old one, so re-running after the rename
+    # cleans up rather than leaving the hook registered twice.
+    blob = json.dumps(entry)
+    return "rewrite_hook.py" in blob or "claude_code_hook.py" in blob
 
 
 def install(path: Path) -> int:
